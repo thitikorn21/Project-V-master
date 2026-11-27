@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:brain-hub:schema:commands",
+  "title": "governance/commands.yml",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "description": {
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "Conductor",
+              "Executor",
+              "Reviewer",
+              "Sentinel"
+            ]
+          },
+          "executor": {
+            "type": "string",
+            "minLength": 1
+          },
+          "workdir": {
+            "type": "string",
+            "minLength": 1
+          },
+          "argv": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "timeout_minutes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "max_risk": {
+            "enum": [
+              "R0",
+              "R1",
+              "R2",
+              "R3"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "executor",
+          "workdir",
+          "argv",
+          "timeout_minutes",
+          "max_risk"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "version",
+    "commands"
+  ],
+  "additionalProperties": false
+}

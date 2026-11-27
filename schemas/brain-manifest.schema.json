@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:brain-hub:schema:brain-manifest",
+  "title": "Work repo manifest (brain.yml)",
+  "type": "object",
+  "properties": {
+    "brain_repo": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "purpose": {
+      "type": "string"
+    },
+    "entities_read": {
+      "type": "array",
+      "items": {
+        "$ref": "urn:brain-hub:schema:common#/$defs/id_ref"
+      }
+    },
+    "entities_written": {
+      "type": "array",
+      "items": {
+        "$ref": "urn:brain-hub:schema:common#/$defs/id_ref"
+      }
+    },
+    "allowed_executors": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "default_risk": {
+      "enum": [
+        "R0",
+        "R1",
+        "R2",
+        "R3"
+      ]
+    }
+  },
+  "required": [
+    "brain_repo",
+    "purpose",
+    "entities_read",
+    "entities_written",
+    "allowed_executors",
+    "default_risk"
+  ],
+  "additionalProperties": false
+}

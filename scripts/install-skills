@@ -1,0 +1,182 @@
+#!/usr/bin/env python3
+"""Install the skills/plugins listed in skills.lock.yml (SPEC §16).
+
+Usage:
+  python scripts/install-skills            # dry-run: validate the lock and show the plan
+  python scripts/install-skills --apply    # fetch each pinned commit and install it
+
+Rules:
+  * The lock must pass schemas/skills-lock.schema.json.
+  * An entry with status: unresolved and required: true stops the whole run before anything is
+    fetched. Optional unresolved entries are skipped with a warning.
+  * Every resolved entry is pinned to a full 40-character commit SHA. The source is fetched at
+    exactly that commit and HEAD is checked against it; no branch or tag is ever followed.
+  * Nothing from the fetched source is executed. kind: claude-plugin registers the pinned checkout
+    as a local marketplace with the `claude` CLI; kind: skill-folder copies the folder.
+Exit code: 0 ok, 1 install error, 2 bad lock or usage, 3 blocked by unresolved required entry.
+"""
+from __future__ import annotations
+
+import argparse
+import importlib.util
+import json
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+import yaml
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def load_validator():
+    spec = importlib.util.spec_from_file_location("brain_validate", ROOT / "scripts" / "validate.py")
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def run(cmd, cwd=None, env=None) -> subprocess.CompletedProcess:
+    return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, encoding="utf-8", env=env)
+
+
+def fetch_pinned(source: str, ref: str, dest: Path, git_env: dict[str, str]) -> str | None:
+    """Fetch exactly `ref` from `source` into `dest`. Returns an error message or None."""
+    if (dest / ".git").is_dir():
+        head = run(["git", "rev-parse", "HEAD"], cwd=dest, env=git_env).stdout.strip()
+        if head == ref:
+            return None
+        shutil.rmtree(dest)
+    dest.mkdir(parents=True, exist_ok=True)
+    for cmd in (["git", "init", "-q"],
+                ["git", "remote", "add", "origin", source],
+                ["git", "fetch", "-q", "--depth", "1", "origin", ref],
+                ["git", "-c", "advice.detachedHead=false", "checkout", "-q", "--detach", "FETCH_HEAD"]):
+        res = run(cmd, cwd=dest, env=git_env)
+        if res.returncode != 0:
+            return f"{' '.join(cmd)}: {(res.stderr or res.stdout).strip()}"
+    head = run(["git", "rev-parse", "HEAD"], cwd=dest, env=git_env).stdout.strip()
+    if head != ref:
+        return f"commit ที่ได้ ({head}) ไม่ตรงกับ ref ที่ตรึงไว้ ({ref})"
+    return None
+
+
+def check_marketplace(checkout: Path, entry: dict) -> str | None:
+    manifest = checkout / ".claude-plugin" / "marketplace.json"
+    if not manifest.is_file():
+        return "ไม่พบ .claude-plugin/marketplace.json ที่ commit นี้"
+    data = json.loads(manifest.read_text(encoding="utf-8"))
+    if data.get("name") != entry["marketplace"]:
+        return f"ชื่อ marketplace คือ {data.get('name')!r} ไม่ใช่ {entry['marketplace']!r}"
+    want = "./" + entry["path"].strip("/")
+    for p in data.get("plugins") or []:
+        if p.get("name") == entry["plugin"]:
+            if str(p.get("source")).rstrip("/") != want:
+                return f"plugin {entry['plugin']!r} ชี้ไปที่ {p.get('source')!r} ไม่ใช่ {want!r}"
+            return None
+    return f"ไม่พบ plugin {entry['plugin']!r} ใน marketplace"
+
+
+def main(argv=None) -> int:
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except (AttributeError, ValueError):
+            pass
+    ap = argparse.ArgumentParser(description="ติดตั้ง skill ตาม skills.lock.yml")
+    ap.add_argument("--lock", default=str(ROOT / "skills.lock.yml"))
+    ap.add_argument("--apply", action="store_true", help="ติดตั้งจริง (ค่าเริ่มต้นแสดงแผนอย่างเดียว)")
+    ap.add_argument("--cache", default=str(Path.home() / ".cache" / "brain-hub" / "skills"),
+                    help="ที่เก็บ checkout ที่ตรึง commit")
+    ap.add_argument("--target", default=str(Path.home() / ".claude" / "skills"),
+                    help="ปลายทางของ kind: skill-folder")
+    ap.add_argument("--claude-bin", default="claude", help="คำสั่ง claude CLI")
+    ap.add_argument("--allow-local-source", action="store_true", help=argparse.SUPPRESS)
+    args = ap.parse_args(argv)
+
+    lock_path = Path(args.lock)
+    if not lock_path.is_file():
+        print(f"ไม่พบ {lock_path}", file=sys.stderr)
+        return 2
+    lock = yaml.safe_load(lock_path.read_text(encoding="utf-8"))
+    validator = load_validator()
+    registry, schemas = validator.build_registry()
+    lock = validator.normalize(lock)
+    if args.allow_local_source and isinstance(lock, dict):
+        print("คำเตือน: --allow-local-source ใช้สำหรับชุดทดสอบเท่านั้น")
+        checked = json.loads(json.dumps(lock))
+        for s in checked.get("skills") or []:
+            if isinstance(s, dict) and "source" in s:
+                s["source"] = "https://github.com/local/test"
+    else:
+        checked = lock
+    problems = validator.schema_errors(schemas["skills-lock"], registry, checked)
+    if problems:
+        print(f"{lock_path.name} ไม่ผ่าน schema:", file=sys.stderr)
+        for p in problems:
+            print("  " + p, file=sys.stderr)
+        return 2
+
+    skills = lock["skills"]
+    blocking = [s for s in skills if s["status"] == "unresolved" and s["required"]]
+    if blocking:
+        print("หยุด: มี skill ที่จำเป็นแต่ยังยืนยันที่มาไม่ได้ (status: unresolved) — ยังไม่ได้ติดตั้งอะไรเลย")
+        for s in blocking:
+            print(f"  - {s['name']}: {s['reason']}")
+        print("ทางแก้: ตรวจที่มาจากแหล่งทางการ แล้วใส่ source, ref (commit 40 ตัว), license, verified_at ใน lock")
+        return 3
+
+    print(f"แผนการติดตั้งจาก {lock_path.name}:")
+    todo = []
+    for s in skills:
+        if s["status"] == "unresolved":
+            print(f"  ข้าม  {s['name']} (optional, unresolved: {s['reason']})")
+            continue
+        print(f"  ติดตั้ง {s['name']} [{s['kind']}] จาก {s['source']} @ {s['ref']} path={s['path']} "
+              f"license={s['license']}")
+        todo.append(s)
+    if not args.apply:
+        print("(dry-run) ยังไม่ได้ดาวน์โหลดหรือติดตั้งอะไร — เพิ่ม --apply เพื่อติดตั้งจริง")
+        return 0
+
+    failed = False
+    for s in todo:
+        dest = Path(args.cache) / f"{s['name']}-{s['ref'][:12]}"
+        err = fetch_pinned(s["source"], s["ref"], dest, validator.clean_git_env())
+        if err is None and not (dest / s["path"]).exists():
+            err = f"ไม่พบ path {s['path']!r} ที่ commit นี้"
+        if err is None and s["kind"] == "claude-plugin":
+            err = check_marketplace(dest, s)
+        if err:
+            print(f"ล้มเหลว {s['name']}: {err}")
+            failed = True
+            continue
+        if s["kind"] == "skill-folder":
+            target = Path(args.target) / s["name"]
+            if target.exists():
+                shutil.rmtree(target)
+            shutil.copytree(dest / s["path"], target, ignore=shutil.ignore_patterns(".git"))
+            print(f"ติดตั้ง {s['name']} ที่ {target} แล้ว")
+            continue
+        for cmd in ([args.claude_bin, "plugin", "marketplace", "add", str(dest)],
+                    [args.claude_bin, "plugin", "install", f"{s['plugin']}@{s['marketplace']}"]):
+            try:
+                res = run(cmd)
+            except FileNotFoundError:
+                print(f"ล้มเหลว {s['name']}: ไม่พบคำสั่ง {args.claude_bin!r}")
+                failed = True
+                break
+            print(f"$ {' '.join(cmd)}\n{(res.stdout + res.stderr).strip()}")
+            if res.returncode != 0:
+                print(f"ล้มเหลว {s['name']}: exit {res.returncode}")
+                failed = True
+                break
+        else:
+            print(f"ติดตั้ง {s['name']} แล้ว (marketplace ในเครื่องที่ commit {s['ref'][:12]})")
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

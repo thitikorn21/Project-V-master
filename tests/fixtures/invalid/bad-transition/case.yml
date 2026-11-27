@@ -1,0 +1,3 @@
+description: deprecated กลับเป็น proven ไม่ได้
+args: [structure, --base-dir, "{case}/base"]
+expect_code: bad-transition

@@ -1,0 +1,6 @@
+lock_version: 1
+skills:
+  - name: demo-skill
+    status: unresolved
+    required: false
+    reason: ตัวอย่างรายการที่ยังยืนยันที่มาไม่ได้

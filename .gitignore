@@ -1,0 +1,21 @@
+# Obsidian: เก็บเฉพาะ app.json (การตั้งค่ารูปแบบลิงก์) ไฟล์อื่นเป็นของเครื่องแต่ละคน
+.obsidian/*
+!.obsidian/app.json
+
+# Claude Code: ตั้งค่าส่วนตัวของเครื่อง
+.claude/settings.local.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# ระบบปฏิบัติการ
+.DS_Store
+Thumbs.db
+
+# ความลับ — ห้ามอยู่ใน repo
+.env
+.env.*
+*.pem
+*.key

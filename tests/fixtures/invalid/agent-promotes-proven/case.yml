@@ -1,0 +1,3 @@
+description: branch agent/ ยก unverified เป็น proven เอง
+args: [structure, --head-ref, agent/x, --base-dir, "{case}/base"]
+expect_code: agent-promoted-proven

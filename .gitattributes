@@ -1,0 +1,15 @@
+# บังคับ line ending แบบ LF (กัน Windows ทำให้ CI พัง)
+* text=auto eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.py text eol=lf
+*.js text eol=lf
+*.sh text eol=lf
+*.txt text eol=lf
+*.csv text eol=lf
+scripts/upgrade-core text eol=lf
+scripts/install-skills text eol=lf
+VERSION text eol=lf
+.github/CODEOWNERS text eol=lf

@@ -1,0 +1,3 @@
+description: ลิงก์ภายในชี้ไฟล์ที่ไม่มี
+args: [structure]
+expect_code: broken-link

@@ -1,0 +1,3 @@
+description: task card อ้าง context ที่ไม่มี
+args: [structure]
+expect_code: missing-ref

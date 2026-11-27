@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:brain-hub:schema:research",
+  "title": "Research note",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "urn:brain-hub:schema:common#/$defs/base"
+    }
+  ],
+  "properties": {
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string",
+            "pattern": "^https?://"
+          },
+          "accessed": {
+            "$ref": "urn:brain-hub:schema:common#/$defs/date"
+          }
+        },
+        "required": [
+          "title",
+          "url",
+          "accessed"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "review_after": {
+      "anyOf": [
+        {
+          "$ref": "urn:brain-hub:schema:common#/$defs/date"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "type": {
+      "const": "research"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^rsch-[a-z0-9][a-z0-9-]*$"
+    }
+  },
+  "patternProperties": {
+    "^x-": {}
+  },
+  "unevaluatedProperties": false,
+  "required": [
+    "sources"
+  ]
+}

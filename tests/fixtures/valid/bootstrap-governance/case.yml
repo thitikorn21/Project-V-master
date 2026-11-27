@@ -1,0 +1,4 @@
+description: branch agent/ สร้าง governance/ ครั้งแรกตอน base ยังไม่มี = ผ่านพร้อมคำเตือน
+runs:
+  - args: [guards, --head-ref, agent/bootstrap, --changed-files, "{case}/changed.txt", --base-dir, "{case}/base"]
+    expect_output: governance-bootstrap

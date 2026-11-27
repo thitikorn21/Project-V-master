@@ -1,0 +1,26 @@
+# พาธที่แม่แบบเป็นเจ้าของ (core) และพาธของ instance — ใช้โดย scripts/upgrade-core
+# บรรทัดที่ลงท้ายด้วย / = ทั้งโฟลเดอร์
+
+[core]
+SPEC.md
+PRINCIPLES.md
+schemas/
+templates/
+scripts/
+.github/workflows/
+.claude/agents/
+docs/
+core-paths.txt
+VERSION
+CHANGELOG.md
+tests/
+
+[instance]
+governance/
+knowledge/
+decisions/
+repos/
+work/
+research/
+README.md
+skills.lock.yml

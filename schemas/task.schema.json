@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:brain-hub:schema:task",
+  "title": "Task card",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "urn:brain-hub:schema:common#/$defs/base"
+    }
+  ],
+  "properties": {
+    "status": {
+      "enum": [
+        "inbox",
+        "ready",
+        "claimed",
+        "running",
+        "review",
+        "needs-approval",
+        "done",
+        "failed",
+        "cancelled"
+      ]
+    },
+    "repo": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "executor": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "risk": {
+      "enum": [
+        "R0",
+        "R1",
+        "R2",
+        "R3"
+      ]
+    },
+    "context": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "acceptance": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "budget": {
+      "type": "object",
+      "properties": {
+        "max_attempts": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_minutes": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "max_attempts",
+        "max_minutes"
+      ],
+      "additionalProperties": false
+    },
+    "claimed_by": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "claim_expires": {
+      "anyOf": [
+        {
+          "$ref": "urn:brain-hub:schema:common#/$defs/datetime"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "created_by": {
+      "enum": [
+        "human",
+        "channel",
+        "sentinel",
+        "conductor"
+      ]
+    },
+    "type": {
+      "const": "task"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^task-[a-z0-9][a-z0-9-]*$"
+    }
+  },
+  "patternProperties": {
+    "^x-": {}
+  },
+  "unevaluatedProperties": false,
+  "required": [
+    "status",
+    "risk",
+    "context",
+    "acceptance",
+    "budget",
+    "created_by"
+  ]
+}

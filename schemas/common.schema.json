@@ -1,0 +1,278 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:brain-hub:schema:common",
+  "title": "Shared definitions for Brain Hub notes",
+  "$defs": {
+    "date": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "datetime": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}([T ]\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?(Z|[+-]\\d{2}:?\\d{2})?)?$"
+    },
+    "semver": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?$"
+    },
+    "classification": {
+      "enum": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted"
+      ]
+    },
+    "id_ref": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{7,40}$"
+    },
+    "written_by": {
+      "type": "object",
+      "properties": {
+        "role": {
+          "enum": [
+            "human",
+            "channel",
+            "conductor",
+            "executor",
+            "reviewer",
+            "sentinel",
+            "approver"
+          ]
+        },
+        "tool": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "run_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "role"
+      ],
+      "additionalProperties": false
+    },
+    "evidence_item": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "query",
+            "reconciliation",
+            "test",
+            "doc",
+            "observation"
+          ]
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "result": {
+          "type": "string",
+          "minLength": 1
+        },
+        "run_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "ref",
+        "result"
+      ],
+      "additionalProperties": false
+    },
+    "base": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "type": {
+          "enum": [
+            "system",
+            "entity",
+            "field",
+            "rule",
+            "query",
+            "dq",
+            "glossary",
+            "decision",
+            "repo",
+            "task",
+            "handoff",
+            "run",
+            "research"
+          ]
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "classification": {
+          "$ref": "#/$defs/classification"
+        },
+        "spec_version": {
+          "$ref": "#/$defs/semver"
+        },
+        "created": {
+          "$ref": "#/$defs/date"
+        },
+        "updated": {
+          "$ref": "#/$defs/date"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "title",
+        "classification",
+        "spec_version",
+        "created",
+        "updated"
+      ]
+    },
+    "knowledge": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "enum": [
+            "proposed",
+            "unverified",
+            "proven",
+            "deprecated",
+            "conflicted"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence_item"
+          }
+        },
+        "verified_at": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/date"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "verified_commit": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/commit"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "verified_by": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^(human|check):\\S+$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "effective_from": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/date"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "effective_to": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/date"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_system": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "review_after": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/date"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "supersedes": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id_ref"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "superseded_by": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id_ref"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "conflicts_with": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id_ref"
+          }
+        },
+        "written_by": {
+          "$ref": "#/$defs/written_by"
+        }
+      },
+      "required": [
+        "status"
+      ]
+    }
+  }
+}

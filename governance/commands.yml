@@ -1,0 +1,28 @@
+# Allowlist ของคำสั่งที่ Conductor รันได้ (SPEC §8) — ตัวอย่างเริ่มต้น
+# argv เป็น list (ไม่ผ่าน shell) ค่าใน {วงเล็บปีกกา} แทนด้วยค่าจาก task card เท่านั้น
+version: 1
+commands:
+  - id: validate-brain
+    description: ตรวจ Brain repo ทั้งหมดด้วย validator
+    role: Conductor
+    executor: ci
+    workdir: "."
+    argv: ["python", "scripts/validate.py", "all"]
+    timeout_minutes: 5
+    max_risk: R0
+  - id: stale-report
+    description: รายงานโน้ตที่เลย review_after (เตือนอย่างเดียว)
+    role: Sentinel
+    executor: ci
+    workdir: "."
+    argv: ["python", "scripts/validate.py", "freshness"]
+    timeout_minutes: 5
+    max_risk: R0
+  - id: run-executor
+    description: ให้ Executor ทำ task บน branch agent/{task_id} ใน work repo ที่ task ระบุ
+    role: Conductor
+    executor: coding-agent
+    workdir: "../{repo}"
+    argv: ["coding-agent", "--task", "work/tasks/{task_id}.md"]
+    timeout_minutes: 60
+    max_risk: R2

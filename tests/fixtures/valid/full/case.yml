@@ -1,0 +1,7 @@
+description: repo ตัวอย่างที่ครบทุก type ต้องผ่านทุก check
+runs:
+  - args: [structure]
+  - args: [guards]
+  - args: [freshness, --today, "2026-11-27"]
+    expect_output: stale
+  - args: [run-checks]

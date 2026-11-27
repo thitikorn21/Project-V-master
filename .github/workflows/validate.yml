@@ -1,0 +1,79 @@
+name: validate
+
+# SPEC §12 — 3 required checks: structure, guards, freshness
+# ห้ามใช้ pull_request_target; สิทธิ์อ่านอย่างเดียว; action ตรึงด้วย commit SHA เต็ม
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUTF8: "1"
+
+jobs:
+  structure:
+    name: structure
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Install validator dependencies
+        run: python -m pip install --disable-pip-version-check -r scripts/requirements.txt
+      - name: Validate notes, links, status rules, skills.lock.yml
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_REF: ${{ github.head_ref || github.ref_name }}
+        run: python scripts/validate.py structure --base "$BASE_SHA" --head-ref "$HEAD_REF"
+      - name: Re-run evidence checks of proven notes
+        run: python scripts/validate.py run-checks
+      - name: Self-tests (validator, upgrade-core, install-skills)
+        run: python tests/run_tests.py
+
+  guards:
+    name: guards
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Install validator dependencies
+        run: python -m pip install --disable-pip-version-check -r scripts/requirements.txt
+      - name: governance-guard, classification-guard, secrets
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_REF: ${{ github.head_ref || github.ref_name }}
+        run: python scripts/validate.py guards --base "$BASE_SHA" --head-ref "$HEAD_REF"
+
+  freshness:
+    name: freshness
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Install validator dependencies
+        run: python -m pip install --disable-pip-version-check -r scripts/requirements.txt
+      - name: stale-report (warnings only)
+        run: python scripts/validate.py freshness
