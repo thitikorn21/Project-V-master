@@ -1,0 +1,7 @@
+# manifest ของ work repo (SPEC §6) — schema: schemas/brain-manifest.schema.json
+brain_repo: <owner>/<brain-repo>
+purpose: ""
+entities_read: []
+entities_written: []
+allowed_executors: []
+default_risk: R1
