@@ -1,0 +1,5 @@
+# ค่าที่ validator ใช้ (schema: schemas/profile.schema.json)
+# แม่แบบ (master) รับได้แค่ public
+# หลังสร้าง instance ด้วย "Use this template" ให้มนุษย์เปลี่ยน role เป็น instance และเพิ่มระดับที่รับได้
+role: master
+allowed_classifications: [public]
