@@ -1,0 +1,3 @@
+description: master มีโน้ต internal
+args: [guards]
+expect_code: classification-not-allowed

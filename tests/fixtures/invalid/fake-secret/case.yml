@@ -1,0 +1,3 @@
+description: มี token และ private key ปลอม (ชุดทดสอบสร้างค่าตอนรัน ไม่เก็บในไฟล์)
+args: [guards]
+expect_code: secret-found

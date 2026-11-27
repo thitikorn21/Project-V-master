@@ -1,0 +1,3 @@
+description: proven แต่ไม่มี evidence
+args: [structure]
+expect_code: proven-without-evidence
