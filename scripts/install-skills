@@ -38,14 +38,14 @@ def load_validator():
     return mod
 
 
-def run(cmd, cwd=None) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, encoding="utf-8")
+def run(cmd, cwd=None, env=None) -> subprocess.CompletedProcess:
+    return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, encoding="utf-8", env=env)
 
 
-def fetch_pinned(source: str, ref: str, dest: Path) -> str | None:
+def fetch_pinned(source: str, ref: str, dest: Path, git_env: dict[str, str]) -> str | None:
     """Fetch exactly `ref` from `source` into `dest`. Returns an error message or None."""
     if (dest / ".git").is_dir():
-        head = run(["git", "rev-parse", "HEAD"], cwd=dest).stdout.strip()
+        head = run(["git", "rev-parse", "HEAD"], cwd=dest, env=git_env).stdout.strip()
         if head == ref:
             return None
         shutil.rmtree(dest)
@@ -54,10 +54,10 @@ def fetch_pinned(source: str, ref: str, dest: Path) -> str | None:
                 ["git", "remote", "add", "origin", source],
                 ["git", "fetch", "-q", "--depth", "1", "origin", ref],
                 ["git", "-c", "advice.detachedHead=false", "checkout", "-q", "--detach", "FETCH_HEAD"]):
-        res = run(cmd, cwd=dest)
+        res = run(cmd, cwd=dest, env=git_env)
         if res.returncode != 0:
             return f"{' '.join(cmd)}: {(res.stderr or res.stdout).strip()}"
-    head = run(["git", "rev-parse", "HEAD"], cwd=dest).stdout.strip()
+    head = run(["git", "rev-parse", "HEAD"], cwd=dest, env=git_env).stdout.strip()
     if head != ref:
         return f"commit ที่ได้ ({head}) ไม่ตรงกับ ref ที่ตรึงไว้ ({ref})"
     return None
@@ -144,7 +144,7 @@ def main(argv=None) -> int:
     failed = False
     for s in todo:
         dest = Path(args.cache) / f"{s['name']}-{s['ref'][:12]}"
-        err = fetch_pinned(s["source"], s["ref"], dest)
+        err = fetch_pinned(s["source"], s["ref"], dest, validator.clean_git_env())
         if err is None and not (dest / s["path"]).exists():
             err = f"ไม่พบ path {s['path']!r} ที่ commit นี้"
         if err is None and s["kind"] == "claude-plugin":

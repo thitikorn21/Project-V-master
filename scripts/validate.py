@@ -88,6 +88,22 @@ class Note:
     problem: str | None = None
 
 
+_GIT_LOCAL_VARS: list[str] | None = None
+
+
+def clean_git_env() -> dict[str, str]:
+    """Environment for git commands aimed at an explicit folder (git -C <dir>).
+
+    Variables such as GIT_DIR or GIT_INDEX_FILE (set inside git hooks, for example) would make
+    git act on a different repository than the one named. The list comes from git itself.
+    """
+    global _GIT_LOCAL_VARS
+    if _GIT_LOCAL_VARS is None:
+        res = subprocess.run(["git", "rev-parse", "--local-env-vars"], capture_output=True, text=True)
+        _GIT_LOCAL_VARS = res.stdout.split() if res.returncode == 0 else []
+    return {k: v for k, v in os.environ.items() if k not in _GIT_LOCAL_VARS}
+
+
 def rel(root: Path, p: Path) -> str:
     return p.relative_to(root).as_posix()
 
@@ -187,7 +203,7 @@ class BaseView:
             return p.read_text(encoding="utf-8") if p.is_file() else None
         if self.ref is not None:
             res = subprocess.run(["git", "-C", str(self.root), "show", f"{self.ref}:{relpath}"],
-                                 capture_output=True, text=True, encoding="utf-8")
+                                 capture_output=True, text=True, encoding="utf-8", env=clean_git_env())
             return res.stdout if res.returncode == 0 else None
         return None
 
@@ -197,14 +213,14 @@ class BaseView:
             return d.is_dir() and any(x.is_file() for x in d.rglob("*"))
         if self.ref is not None:
             res = subprocess.run(["git", "-C", str(self.root), "ls-tree", "-r", "--name-only", self.ref, "--", prefix],
-                                 capture_output=True, text=True, encoding="utf-8")
+                                 capture_output=True, text=True, encoding="utf-8", env=clean_git_env())
             return bool(res.stdout.strip())
         return False
 
 
 def git_ref_ok(root: Path, ref: str) -> bool:
     res = subprocess.run(["git", "-C", str(root), "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
-                         capture_output=True, text=True)
+                         capture_output=True, text=True, env=clean_git_env())
     return res.returncode == 0
 
 
@@ -225,7 +241,7 @@ def changed_files(args, root: Path, base: BaseView) -> list[str] | None:
         return [ln.strip() for ln in lines if ln.strip() and not ln.startswith("#")]
     if base.ref is not None:
         res = subprocess.run(["git", "-C", str(root), "diff", "--name-only", "--no-renames", base.ref, "HEAD"],
-                             capture_output=True, text=True, encoding="utf-8")
+                             capture_output=True, text=True, encoding="utf-8", env=clean_git_env())
         if res.returncode == 0:
             return [ln for ln in res.stdout.splitlines() if ln]
     return None
