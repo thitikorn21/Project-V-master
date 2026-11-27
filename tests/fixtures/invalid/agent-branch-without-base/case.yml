@@ -1,0 +1,6 @@
+description: ชื่อ branch agent/ มาจากตัวแปร GITHUB_HEAD_REF (แบบใน CI) แต่ไม่มี base ให้หาไฟล์ที่เปลี่ยน = guard ต้องปฏิเสธ (fail-closed)
+env:
+  GITHUB_HEAD_REF: agent/x
+  GITHUB_ACTIONS: "true"
+args: [guards]
+expect_code: governance-touched
