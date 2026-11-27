@@ -1,0 +1,21 @@
+# skill / plugin ที่ instance ต้องใช้ (SPEC §16) — schema: schemas/skills-lock.schema.json
+# ติดตั้งด้วย: python scripts/install-skills  (ค่าเริ่มต้นแสดงแผนอย่างเดียว เพิ่ม --apply เพื่อติดตั้งจริง)
+# ref ต้องเป็น commit SHA เต็ม 40 ตัว — ตัวติดตั้งจะไม่รันโค้ดจาก ref ที่ไม่ได้ตรึง
+lock_version: 1
+skills:
+  - name: pstack
+    status: resolved
+    kind: claude-plugin
+    source: https://github.com/cursor/plugins
+    ref: b7b93c36be9bcc36a74db438e0fd385d660bc559
+    version: 0.15.48
+    path: harness/pstack/claude-code
+    marketplace: cursor-plugins
+    plugin: pstack
+    required: true
+    verified_at: 2026-11-27
+    license: MIT
+    notes: >-
+      ชุด skill ด้าน workflow ของ agent โดย Lauren Tan อยู่ในโฟลเดอร์ pstack/ ของ repo cursor/plugins
+      (repo นั้นไม่มี tag จึงตรึงด้วย commit) ตัวที่ Claude Code ใช้คือ harness/pstack/claude-code
+      ตามไฟล์ .claude-plugin/marketplace.json ที่ commit นี้ license MIT อยู่ในไฟล์ LICENSE ของโฟลเดอร์นั้น

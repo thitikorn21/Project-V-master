@@ -1,0 +1,172 @@
+#!/usr/bin/env python3
+"""Upgrade the core paths of a Brain instance from a template tag (SPEC §14.1).
+
+Usage (run inside the instance repo):
+  python scripts/upgrade-core --to v0.2.0            # dry-run: show what would change
+  python scripts/upgrade-core --to v0.2.0 --apply    # create branch agent/upgrade-core-v0.2.0 and commit
+
+How it works:
+  * The template is a git remote (default name: upstream). Only the two tags needed are fetched,
+    into refs/upstream/tags/<tag>, so the instance's own tags are not touched.
+  * The starting tag is "v" + the content of VERSION (or --from).
+  * Only the difference between the two tags inside the [core] paths of core-paths.txt is applied,
+    with a 3-way merge so local edits to core files are kept where possible.
+  * Changes the template made under [instance] paths (governance/, knowledge/, ...) are listed as
+    "ต้องตรวจเอง" and never written. Paths in neither list are reported and left alone.
+  * Never pushes. Exit code: 0 ok, 1 conflict or error, 2 bad usage.
+"""
+from __future__ import annotations
+
+import argparse
+import re
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+TAG_RE = re.compile(r"^v\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$")
+
+
+def git(*args, cwd: Path, check=True, capture=True) -> subprocess.CompletedProcess:
+    res = subprocess.run(["git", *args], cwd=cwd, capture_output=capture, text=True, encoding="utf-8")
+    if check and res.returncode != 0:
+        raise SystemExit(f"git {' '.join(args)} ล้มเหลว:\n{(res.stderr or res.stdout).strip()}")
+    return res
+
+
+def parse_core_paths(text: str) -> tuple[list[str], list[str]]:
+    sections = {"core": [], "instance": []}
+    current = None
+    for raw in text.splitlines():
+        line = raw.split("#", 1)[0].strip()
+        if not line:
+            continue
+        if line in ("[core]", "[instance]"):
+            current = line[1:-1]
+            continue
+        if current is None:
+            raise SystemExit(f"core-paths.txt: บรรทัด {raw!r} อยู่นอก [core]/[instance]")
+        sections[current].append(line)
+    return sections["core"], sections["instance"]
+
+
+def matches(path: str, entries: list[str]) -> bool:
+    for e in entries:
+        if e.endswith("/"):
+            if path.startswith(e):
+                return True
+        elif path == e:
+            return True
+    return False
+
+
+def main(argv=None) -> int:
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except (AttributeError, ValueError):
+            pass
+    ap = argparse.ArgumentParser(description="อัปเกรดเฉพาะ core paths จาก tag ของแม่แบบ")
+    ap.add_argument("--to", required=True, help="tag ใหม่ของแม่แบบ เช่น v0.2.0")
+    ap.add_argument("--from", dest="from_tag", help="tag เดิม (ค่าเริ่มต้น: v + เนื้อหาไฟล์ VERSION)")
+    ap.add_argument("--remote", default="upstream", help="ชื่อ remote ของแม่แบบ (ค่าเริ่มต้น upstream)")
+    ap.add_argument("--apply", action="store_true", help="ลงมือจริง (ค่าเริ่มต้นแสดงแผนอย่างเดียว)")
+    ap.add_argument("--no-fetch", action="store_true", help="ไม่ fetch ใช้ ref ที่ fetch ไว้แล้ว")
+    args = ap.parse_args(argv)
+
+    root = Path(git("rev-parse", "--show-toplevel", cwd=Path.cwd()).stdout.strip())
+    from_tag = args.from_tag
+    if not from_tag:
+        vfile = root / "VERSION"
+        if not vfile.is_file():
+            print("ไม่พบไฟล์ VERSION — ระบุ --from เอง", file=sys.stderr)
+            return 2
+        from_tag = "v" + vfile.read_text(encoding="utf-8").strip()
+    for t in (from_tag, args.to):
+        if not TAG_RE.match(t):
+            print(f"tag {t!r} ไม่ใช่รูป vX.Y.Z", file=sys.stderr)
+            return 2
+    if from_tag == args.to:
+        print(f"อยู่ที่ {args.to} แล้ว ไม่มีอะไรต้องทำ")
+        return 0
+
+    refs = {t: f"refs/upstream/tags/{t}" for t in (from_tag, args.to)}
+    if not args.no_fetch:
+        if git("remote", "get-url", args.remote, cwd=root, check=False).returncode != 0:
+            print(f"ไม่พบ remote {args.remote!r} — เพิ่มก่อนด้วย: git remote add {args.remote} <URL ของแม่แบบ>",
+                  file=sys.stderr)
+            return 2
+        specs = [f"+refs/tags/{t}:{r}" for t, r in refs.items()]
+        git("fetch", "--no-tags", args.remote, *specs, cwd=root)
+    for t, r in refs.items():
+        if git("rev-parse", "--verify", "--quiet", f"{r}^{{commit}}", cwd=root, check=False).returncode != 0:
+            print(f"ไม่พบ tag {t} ของแม่แบบ ({r})", file=sys.stderr)
+            return 2
+    old_ref, new_ref = refs[from_tag], refs[args.to]
+
+    new_core, new_instance = parse_core_paths(git("show", f"{new_ref}:core-paths.txt", cwd=root).stdout)
+    old_cp = git("show", f"{old_ref}:core-paths.txt", cwd=root, check=False)
+    old_core = parse_core_paths(old_cp.stdout)[0] if old_cp.returncode == 0 else []
+    core = sorted(set(new_core) | set(old_core))
+    instance = new_instance
+
+    diff = git("diff", "--name-status", "--no-renames", old_ref, new_ref, cwd=root).stdout.splitlines()
+    plan = {"core": [], "instance": [], "other": []}
+    for line in diff:
+        status, path = line.split("\t", 1)
+        if matches(path, instance):
+            plan["instance"].append((status, path))
+        elif matches(path, core):
+            plan["core"].append((status, path))
+        else:
+            plan["other"].append((status, path))
+
+    label = {"A": "เพิ่ม", "M": "แก้", "D": "ลบ", "T": "เปลี่ยนชนิด"}
+    print(f"อัปเกรดแม่แบบ {from_tag} → {args.to} (remote: {args.remote})")
+    print(f"\n[จะอัปเกรด] core paths: {len(plan['core'])} ไฟล์")
+    for s, p in plan["core"]:
+        print(f"  {label.get(s[0], s)}  {p}")
+    print(f"\n[ต้องตรวจเอง — ไม่เขียนทับ] พาธของ instance ที่แม่แบบเปลี่ยน: {len(plan['instance'])} ไฟล์")
+    for s, p in plan["instance"]:
+        mark = "  ← governance: ให้มนุษย์อ่าน CHANGELOG แล้วแก้เองถ้าต้องการ" if p.startswith("governance/") else ""
+        print(f"  {label.get(s[0], s)}  {p}{mark}")
+    print(f"\n[ไม่แตะ] พาธที่ไม่อยู่ใน core-paths.txt: {len(plan['other'])} ไฟล์")
+    for s, p in plan["other"]:
+        print(f"  {label.get(s[0], s)}  {p}")
+
+    branch = f"agent/upgrade-core-{args.to}"
+    if not args.apply:
+        print(f"\n(dry-run) ยังไม่ได้เปลี่ยนอะไร — ถ้าจะลงมือ รันซ้ำพร้อม --apply แล้วจะได้ branch {branch}")
+        return 0
+
+    if git("status", "--porcelain", cwd=root).stdout.strip():
+        print("working tree ยังมีไฟล์ที่ไม่ได้ commit — commit หรือ stash ก่อน", file=sys.stderr)
+        return 1
+    if git("rev-parse", "--verify", "--quiet", f"refs/heads/{branch}", cwd=root, check=False).returncode == 0:
+        print(f"มี branch {branch} อยู่แล้ว — ลบหรือเปลี่ยนชื่อเองก่อน", file=sys.stderr)
+        return 1
+    if not plan["core"]:
+        print("ไม่มีการเปลี่ยนใน core paths — ไม่สร้าง branch")
+        return 0
+
+    git("switch", "-c", branch, cwd=root)
+    patch = git("diff", "--binary", "--no-renames", old_ref, new_ref, "--", *[p for _, p in plan["core"]],
+                cwd=root).stdout
+    with tempfile.NamedTemporaryFile("w", suffix=".patch", delete=False, encoding="utf-8", newline="\n") as fh:
+        fh.write(patch)
+        patch_path = fh.name
+    res = git("apply", "--3way", "--index", "--whitespace=nowarn", patch_path, cwd=root, check=False)
+    Path(patch_path).unlink(missing_ok=True)
+    if res.returncode != 0:
+        print(f"\nนำส่วนต่างมาใช้ไม่ได้ทั้งหมด (อยู่บน branch {branch}):\n{(res.stderr or res.stdout).strip()}")
+        print("แก้ไฟล์ที่มีเครื่องหมาย conflict เอง แล้ว git add + git commit หรือยกเลิกด้วย "
+              "git switch - && git branch -D " + branch)
+        return 1
+    git("commit", "-m", f"chore: upgrade core to {args.to} (from {from_tag})", cwd=root)
+    print(f"\nเสร็จ: commit บน branch {branch} แล้ว (ยังไม่ได้ push)")
+    print("ขั้นต่อไป: python scripts/validate.py all → git push -u origin " + branch + " → เปิด PR")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
