@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:brain-hub:schema:dq",
+  "title": "Data quality check note",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "urn:brain-hub:schema:common#/$defs/base"
+    },
+    {
+      "$ref": "urn:brain-hub:schema:common#/$defs/knowledge"
+    }
+  ],
+  "properties": {
+    "check": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "threshold": {
+      "type": [
+        "string",
+        "number",
+        "null"
+      ]
+    },
+    "frequency": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "last_result": {
+      "enum": [
+        "pass",
+        "fail",
+        "not_run",
+        null
+      ]
+    },
+    "last_run": {
+      "anyOf": [
+        {
+          "$ref": "urn:brain-hub:schema:common#/$defs/date"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "type": {
+      "const": "dq"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^dq-[a-z0-9][a-z0-9-]*$"
+    }
+  },
+  "patternProperties": {
+    "^x-": {}
+  },
+  "unevaluatedProperties": false
+}

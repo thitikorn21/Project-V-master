@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:brain-hub:schema:rule",
+  "title": "Business rule note",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "urn:brain-hub:schema:common#/$defs/base"
+    },
+    {
+      "$ref": "urn:brain-hub:schema:common#/$defs/knowledge"
+    }
+  ],
+  "properties": {
+    "formula": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "type": {
+      "const": "rule"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^rule-[a-z0-9][a-z0-9-]*$"
+    }
+  },
+  "patternProperties": {
+    "^x-": {}
+  },
+  "unevaluatedProperties": false
+}

@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:brain-hub:schema:decision",
+  "title": "Decision record (ADR)",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "urn:brain-hub:schema:common#/$defs/base"
+    }
+  ],
+  "properties": {
+    "status": {
+      "enum": [
+        "proposed",
+        "accepted",
+        "superseded"
+      ]
+    },
+    "decided": {
+      "anyOf": [
+        {
+          "$ref": "urn:brain-hub:schema:common#/$defs/date"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "supersedes": {
+      "anyOf": [
+        {
+          "$ref": "urn:brain-hub:schema:common#/$defs/id_ref"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "superseded_by": {
+      "anyOf": [
+        {
+          "$ref": "urn:brain-hub:schema:common#/$defs/id_ref"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "type": {
+      "const": "decision"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^adr-[a-z0-9][a-z0-9-]*$"
+    }
+  },
+  "patternProperties": {
+    "^x-": {}
+  },
+  "unevaluatedProperties": false,
+  "required": [
+    "status"
+  ]
+}

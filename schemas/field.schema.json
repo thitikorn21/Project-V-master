@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:brain-hub:schema:field",
+  "title": "Field note",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "urn:brain-hub:schema:common#/$defs/base"
+    },
+    {
+      "$ref": "urn:brain-hub:schema:common#/$defs/knowledge"
+    }
+  ],
+  "properties": {
+    "entity": {
+      "anyOf": [
+        {
+          "$ref": "urn:brain-hub:schema:common#/$defs/id_ref"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "data_type": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "type": {
+      "const": "field"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^fld-[a-z0-9][a-z0-9-]*$"
+    }
+  },
+  "patternProperties": {
+    "^x-": {}
+  },
+  "unevaluatedProperties": false,
+  "required": [
+    "source_system"
+  ]
+}

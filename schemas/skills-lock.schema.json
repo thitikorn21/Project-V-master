@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:brain-hub:schema:skills-lock",
+  "title": "skills.lock.yml",
+  "type": "object",
+  "properties": {
+    "lock_version": {
+      "const": 1
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "status": {
+            "enum": [
+              "resolved",
+              "unresolved"
+            ]
+          },
+          "kind": {
+            "enum": [
+              "claude-plugin",
+              "skill-folder"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "pattern": "^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+          },
+          "ref": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "marketplace": {
+            "type": "string",
+            "minLength": 1
+          },
+          "plugin": {
+            "type": "string",
+            "minLength": 1
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "verified_at": {
+            "$ref": "urn:brain-hub:schema:common#/$defs/date"
+          },
+          "license": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "status",
+          "required"
+        ],
+        "additionalProperties": false,
+        "if": {
+          "properties": {
+            "status": {
+              "const": "resolved"
+            }
+          }
+        },
+        "then": {
+          "required": [
+            "kind",
+            "source",
+            "ref",
+            "path",
+            "verified_at",
+            "license"
+          ],
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "claude-plugin"
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "marketplace",
+                  "plugin"
+                ]
+              }
+            }
+          ]
+        },
+        "else": {
+          "required": [
+            "reason"
+          ]
+        }
+      }
+    }
+  },
+  "required": [
+    "lock_version",
+    "skills"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:brain-hub:schema:handoff",
+  "title": "Handoff",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "urn:brain-hub:schema:common#/$defs/base"
+    }
+  ],
+  "properties": {
+    "task": {
+      "$ref": "urn:brain-hub:schema:common#/$defs/id_ref"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "executor": {
+      "type": "string",
+      "minLength": 1
+    },
+    "model": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "started": {
+      "anyOf": [
+        {
+          "$ref": "urn:brain-hub:schema:common#/$defs/datetime"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "finished": {
+      "anyOf": [
+        {
+          "$ref": "urn:brain-hub:schema:common#/$defs/datetime"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "outcome": {
+      "enum": [
+        "success",
+        "partial",
+        "failed",
+        "skipped"
+      ]
+    },
+    "changes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "checks": {
+      "type": "object",
+      "properties": {
+        "passed": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "failed": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "not_run": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "passed",
+        "failed",
+        "not_run"
+      ],
+      "additionalProperties": false
+    },
+    "knowledge_proposals": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "open_issues": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "next_steps": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "type": {
+      "const": "handoff"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^ho-[a-z0-9][a-z0-9-]*$"
+    }
+  },
+  "patternProperties": {
+    "^x-": {}
+  },
+  "unevaluatedProperties": false,
+  "required": [
+    "task",
+    "run_id",
+    "executor",
+    "outcome",
+    "checks"
+  ]
+}

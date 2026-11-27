@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:brain-hub:schema:query",
+  "title": "Query note",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "urn:brain-hub:schema:common#/$defs/base"
+    },
+    {
+      "$ref": "urn:brain-hub:schema:common#/$defs/knowledge"
+    }
+  ],
+  "properties": {
+    "language": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "system": {
+      "anyOf": [
+        {
+          "$ref": "urn:brain-hub:schema:common#/$defs/id_ref"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "type": {
+      "const": "query"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^qry-[a-z0-9][a-z0-9-]*$"
+    }
+  },
+  "patternProperties": {
+    "^x-": {}
+  },
+  "unevaluatedProperties": false
+}
