@@ -127,7 +127,7 @@ prefix ของ id: `sys-` system, `ent-` entity, `fld-` field, `rule-` rule, `
 |---|---|
 | `status` | `proposed → unverified → proven → deprecated` หรือ `conflicted` (บังคับ) |
 | `evidence` | list ของ `{kind: query\|reconciliation\|test\|doc\|observation, ref, result, run_id}` |
-| `verified_at` / `verified_commit` / `verified_by` | เวลา, commit ของ repo ที่ใช้พิสูจน์, ผู้ตรวจในรูป `human:<ชื่อ>` หรือ `check:<check-id>` |
+| `verified_at` / `verified_commit` / `verified_by` | เวลา, commit ของ repo ที่ใช้พิสูจน์ (ใส่ในเครื่องหมายคำพูด เช่น `"481522143b75"` เพราะ YAML อ่าน commit ที่เป็นตัวเลขล้วนเป็นตัวเลข), ผู้ตรวจในรูป `human:<ชื่อ>` หรือ `check:<check-id>` |
 | `effective_from` / `effective_to` | ช่วงเวลาที่กฎ/นิยามนี้มีผล (กฎของแพลตฟอร์มเปลี่ยนได้) |
 | `source_system` | ระบบต้นทางของความจริงนี้ (บังคับสำหรับ `field`) |
 | `review_after` | วันที่ต้องตรวจซ้ำ |
