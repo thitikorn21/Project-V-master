@@ -12,13 +12,16 @@ import sys
 import tempfile
 from pathlib import Path
 
+from hermetic import hermetic_env
+
 SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "upgrade-core"
 GIT_ID = ["-c", "user.name=test", "-c", "user.email=test@example.invalid", "-c", "commit.gpgsign=false",
           "-c", "init.defaultBranch=main", "-c", "core.autocrlf=false"]
 
 
 def git(cwd: Path, *args) -> str:
-    res = subprocess.run(["git", *GIT_ID, *args], cwd=cwd, capture_output=True, text=True, encoding="utf-8")
+    res = subprocess.run(["git", *GIT_ID, *args], cwd=cwd, capture_output=True, text=True, encoding="utf-8",
+                          env=hermetic_env())
     if res.returncode != 0:
         raise AssertionError(f"git {args}: {res.stderr}")
     return res.stdout
@@ -45,10 +48,11 @@ V1 = {
 
 
 def run_upgrade(cwd: Path, *args) -> subprocess.CompletedProcess:
-    env_git = subprocess.run(["git", "config", "user.name"], cwd=cwd, capture_output=True, text=True)
+    env_git = subprocess.run(["git", "config", "user.name"], cwd=cwd, capture_output=True, text=True,
+                             env=hermetic_env())
     assert env_git.stdout.strip() == "test", "instance repo must have a local identity"
     return subprocess.run([sys.executable, str(SCRIPT), *args], cwd=cwd, capture_output=True, text=True,
-                          encoding="utf-8")
+                          encoding="utf-8", env=hermetic_env())
 
 
 def main() -> int:

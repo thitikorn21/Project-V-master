@@ -4,7 +4,8 @@
 * required + unresolved  -> exit 3, nothing fetched
 * ref that is not a 40-char commit -> exit 2 (schema)
 * the real skills.lock.yml passes in dry-run
-* --apply with a local throwaway source: installs the pinned commit, not the newer branch tip
+* --apply with a local throwaway source: installs the pinned commit, not the newer branch tip,
+  and a stray GIT_DIR (as inside a git hook) does not redirect git into another repository
 """
 from __future__ import annotations
 
@@ -13,18 +14,22 @@ import sys
 import tempfile
 from pathlib import Path
 
+from hermetic import hermetic_env
+
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts" / "install-skills"
 GIT_ID = ["-c", "user.name=test", "-c", "user.email=test@example.invalid", "-c", "commit.gpgsign=false",
           "-c", "init.defaultBranch=main"]
 
 
-def run(*args) -> subprocess.CompletedProcess:
-    return subprocess.run([sys.executable, str(SCRIPT), *args], capture_output=True, text=True, encoding="utf-8")
+def run(*args, env: dict | None = None) -> subprocess.CompletedProcess:
+    return subprocess.run([sys.executable, str(SCRIPT), *args], capture_output=True, text=True, encoding="utf-8",
+                          env=hermetic_env(env))
 
 
 def git(cwd: Path, *args) -> str:
-    res = subprocess.run(["git", *GIT_ID, *args], cwd=cwd, capture_output=True, text=True, encoding="utf-8")
+    res = subprocess.run(["git", *GIT_ID, *args], cwd=cwd, capture_output=True, text=True, encoding="utf-8",
+                          env=hermetic_env())
     assert res.returncode == 0, res.stderr
     return res.stdout
 
@@ -65,9 +70,17 @@ def main() -> int:
         good.write_text(f"lock_version: 1\nskills:\n  - name: demo\n    status: resolved\n    kind: skill-folder\n"
                         f"    source: {src.as_posix()}\n    ref: {pinned}\n    path: skills\n    required: true\n"
                         f"    verified_at: 2026-11-27\n    license: MIT\n", encoding="utf-8")
+        decoy = t / "decoy"
+        git(t, "init", str(decoy))
+        (decoy / "x.txt").write_text("decoy\n", encoding="utf-8")
+        git(decoy, "add", "-A")
+        git(decoy, "commit", "-m", "decoy")
+        decoy_head = git(decoy, "rev-parse", "HEAD").strip()
         res = run("--lock", str(good), "--apply", "--allow-local-source", "--cache", str(t / "cache"),
-                  "--target", str(t / "target"))
+                  "--target", str(t / "target"), env={"GIT_DIR": str(decoy / ".git")})
         assert res.returncode == 0, res.stdout + res.stderr
+        assert git(decoy, "rev-parse", "HEAD").strip() == decoy_head, "GIT_DIR redirected the install"
+        assert git(decoy, "remote").strip() == "", "GIT_DIR redirected the install"
         installed = (t / "target" / "demo" / "SKILL.md").read_text(encoding="utf-8")
         assert installed == "pinned version\n", installed
     print("test_install_skills: PASS")

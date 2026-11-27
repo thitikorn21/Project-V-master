@@ -3,7 +3,11 @@
 
 1. tests/fixtures/valid/<case>   every run in case.yml must exit 0 (and print expect_output if given)
 2. tests/fixtures/invalid/<case> the validator must exit 1 and report expect_code
-3. tests/test_upgrade_core.py and tests/test_install_skills.py
+3. tests/test_upgrade_core.py, tests/test_install_skills.py and tests/test_hermetic.py
+
+Every subprocess runs with tests/hermetic.py: CI variables (GITHUB_*, CI, ...) and GIT_* are
+removed, and a case adds variables only through an `env:` mapping in its case.yml.
+--fixtures-only runs steps 1 and 2.
 
 Each fixture is copied to a temp folder first. Placeholders such as @@FAKE_GITHUB_TOKEN@@ are
 replaced there with values built at run time, so no secret-shaped text is ever stored in the repo.
@@ -18,6 +22,8 @@ import tempfile
 from pathlib import Path
 
 import yaml
+
+from hermetic import hermetic_env
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
@@ -42,13 +48,14 @@ def materialize(case_dir: Path, tmp: Path) -> Path:
     return dest
 
 
-def run_validator(case: Path, args: list[str]) -> subprocess.CompletedProcess:
+def run_validator(case: Path, args: list[str], env: dict | None) -> subprocess.CompletedProcess:
     args = [str(a).replace("{case}", str(case)) for a in args]
     return subprocess.run([sys.executable, str(VALIDATE), *args, "--root", str(case / "root")],
-                          capture_output=True, text=True, encoding="utf-8")
+                          capture_output=True, text=True, encoding="utf-8", env=hermetic_env(env))
 
 
 def main() -> int:
+    fixtures_only = "--fixtures-only" in sys.argv[1:]
     try:
         sys.stdout.reconfigure(encoding="utf-8")
     except (AttributeError, ValueError):
@@ -62,7 +69,7 @@ def main() -> int:
             case = materialize(case_dir, tmp)
             for r in spec["runs"]:
                 count += 1
-                res = run_validator(case, r["args"])
+                res = run_validator(case, r["args"], r.get("env"))
                 out = res.stdout + res.stderr
                 name = f"valid/{case_dir.name} {' '.join(map(str, r['args']))}"
                 if res.returncode != 0:
@@ -75,7 +82,7 @@ def main() -> int:
             spec = yaml.safe_load((case_dir / "case.yml").read_text(encoding="utf-8"))
             case = materialize(case_dir, tmp)
             count += 1
-            res = run_validator(case, spec["args"])
+            res = run_validator(case, spec["args"], spec.get("env"))
             out = res.stdout + res.stderr
             name = f"invalid/{case_dir.name}"
             if res.returncode != 1:
@@ -84,9 +91,11 @@ def main() -> int:
                 failures.append(f"{name}: ไม่พบ error {spec['expect_code']!r}\n{out}")
             else:
                 print(f"PASS {name} (จับได้: {spec['expect_code']})")
-    for test in ("test_upgrade_core.py", "test_install_skills.py"):
+    modules = () if fixtures_only else ("test_upgrade_core.py", "test_install_skills.py", "test_hermetic.py")
+    for test in modules:
         count += 1
-        res = subprocess.run([sys.executable, str(HERE / test)], capture_output=True, text=True, encoding="utf-8")
+        res = subprocess.run([sys.executable, str(HERE / test)], capture_output=True, text=True, encoding="utf-8",
+                             env=hermetic_env())
         if res.returncode != 0:
             failures.append(f"{test}: exit {res.returncode}\n{res.stdout}{res.stderr}")
         else:
