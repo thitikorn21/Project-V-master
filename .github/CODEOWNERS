@@ -1,0 +1,5 @@
+# เจ้าของที่เป็นมนุษย์ของพาธที่ต้องป้องกัน (SPEC §9.1)
+# เจ้าของต้องมีสิทธิ์ write ใน repo
+/governance/ @thitikorn21
+/.github/ @thitikorn21
+/.claude/settings.json @thitikorn21
