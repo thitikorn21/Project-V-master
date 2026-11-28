@@ -3,7 +3,7 @@
 
 Commands:
   structure   schema, ids, links, references, status-rules, skills.lock.yml, governance files
-  guards      governance-guard, classification-guard, secrets
+  guards      governance-guard, control-plane (warnings), classification-guard, secrets
   freshness   stale-report (warnings only, always exits 0)
   run-checks  re-run the `kind: test` evidence scripts of notes verified by `check:`
   all         structure + guards + freshness
