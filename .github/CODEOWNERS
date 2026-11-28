@@ -1,5 +1,13 @@
 # เจ้าของที่เป็นมนุษย์ของพาธที่ต้องป้องกัน (SPEC §9.1)
 # เจ้าของต้องมีสิทธิ์ write ใน repo
+# รายการต้องตรงกับ PROTECTED_PREFIX + CONTROL_PLANE_PATHS ใน scripts/validate.py (ตรวจโดย tests/test_control_plane.py)
 /governance/ @thitikorn21
 /.github/ @thitikorn21
 /.claude/settings.json @thitikorn21
+/.claude/agents/ @thitikorn21
+/scripts/ @thitikorn21
+/schemas/ @thitikorn21
+/tests/ @thitikorn21
+/core-paths.txt @thitikorn21
+/SPEC.md @thitikorn21
+/PRINCIPLES.md @thitikorn21

@@ -4,7 +4,8 @@
 1. tests/fixtures/valid/<case>   every run in case.yml must exit 0, print every expect_output and
                                  none of expect_absent (each: one string or a list)
 2. tests/fixtures/invalid/<case> the validator must exit 1 and report expect_code
-3. tests/test_upgrade_core.py, tests/test_install_skills.py and tests/test_hermetic.py
+3. tests/test_upgrade_core.py, tests/test_install_skills.py, tests/test_hermetic.py and
+   tests/test_control_plane.py
 
 Every subprocess runs with tests/hermetic.py: CI variables (GITHUB_*, CI, ...) and GIT_* are
 removed, and a case adds variables only through an `env:` mapping in its case.yml.
@@ -102,7 +103,8 @@ def main() -> int:
                 failures.append(f"{name}: ไม่พบ error {spec['expect_code']!r}\n{out}")
             else:
                 print(f"PASS {name} (จับได้: {spec['expect_code']})")
-    modules = () if fixtures_only else ("test_upgrade_core.py", "test_install_skills.py", "test_hermetic.py")
+    modules = () if fixtures_only else ("test_upgrade_core.py", "test_install_skills.py", "test_hermetic.py",
+                                        "test_control_plane.py")
     for test in modules:
         count += 1
         res = subprocess.run([sys.executable, str(HERE / test)], capture_output=True, text=True, encoding="utf-8",
