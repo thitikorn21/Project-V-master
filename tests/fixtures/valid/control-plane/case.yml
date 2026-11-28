@@ -1,0 +1,33 @@
+description: >-
+  branch agent/ แตะ control-plane (scripts/ schemas/ tests/ .github/ .claude/settings.json .claude/agents/
+  core-paths.txt SPEC.md PRINCIPLES.md) = ผ่าน (exit 0) แต่ต้องมีคำเตือน control-plane-touched ทีละไฟล์;
+  branch อื่น หรือแตะแค่ knowledge/ = ไม่เตือน
+runs:
+  - args: [guards, --head-ref, agent/x, --changed-files, "{case}/changed-scripts.txt", --base-dir, "{case}/base"]
+    expect_output: "WARNING control-plane-touched scripts/validate.py:"
+  - args: [guards, --changed-files, "{case}/changed-scripts.txt", --base-dir, "{case}/base"]
+    env:
+      GITHUB_HEAD_REF: agent/x
+      GITHUB_ACTIONS: "true"
+    expect_output:
+      - "::warning file=scripts/validate.py,title=control-plane-touched::"
+      - "WARNING control-plane-touched scripts/validate.py:"
+  - args: [guards, --head-ref, agent/x, --changed-files, "{case}/changed-all.txt", --base-dir, "{case}/base"]
+    expect_output:
+      - "WARNING control-plane-touched scripts/validate.py:"
+      - "WARNING control-plane-touched schemas/field.schema.json:"
+      - "WARNING control-plane-touched tests/run_tests.py:"
+      - "WARNING control-plane-touched .github/CODEOWNERS:"
+      - "WARNING control-plane-touched .claude/settings.json:"
+      - "WARNING control-plane-touched .claude/agents/reviewer.md:"
+      - "WARNING control-plane-touched core-paths.txt:"
+      - "WARNING control-plane-touched SPEC.md:"
+      - "WARNING control-plane-touched PRINCIPLES.md:"
+      - "warning 9"
+    expect_absent: "control-plane-touched knowledge/"
+  - args: [guards, --head-ref, feature/x, --changed-files, "{case}/changed-scripts.txt", --base-dir, "{case}/base"]
+    env:
+      GITHUB_HEAD_REF: agent/x
+    expect_absent: control-plane-touched
+  - args: [guards, --head-ref, agent/x, --changed-files, "{case}/changed-knowledge.txt", --base-dir, "{case}/base"]
+    expect_absent: control-plane-touched

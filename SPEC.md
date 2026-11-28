@@ -246,13 +246,16 @@ Conductor **ห้าม**
 
 | ชั้น | ทำอะไร | อยู่ที่ |
 |---|---|---|
-| CODEOWNERS | PR ที่แตะ `governance/` หรือ `.github/` ต้องได้รีวิวจากเจ้าของที่เป็นมนุษย์ | `.github/CODEOWNERS` |
+| CODEOWNERS | PR ที่แตะ `governance/` หรือพาธ control-plane ต้องได้รีวิวจากเจ้าของที่เป็นมนุษย์ (เมื่อตั้งให้บังคับ) | `.github/CODEOWNERS` |
 | Branch protection | main รับเฉพาะ PR, ต้องผ่าน required checks, ห้าม force-push | ตั้งในหน้า GitHub ([docs/SETUP-GITHUB.md](docs/SETUP-GITHUB.md)) |
-| CI governance-guard | branch ที่ขึ้นต้น `agent/` แตะ `governance/` = fail | `.github/workflows/validate.yml` |
+| CI governance-guard | branch ที่ขึ้นต้น `agent/` แตะ `governance/` = fail; แตะพาธ control-plane = คำเตือน `control-plane-touched` ทีละไฟล์ | `.github/workflows/validate.yml` |
 | Deny rule ของ coding agent | เครื่องมือแก้ไฟล์ของ agent ถูกปฏิเสธใน `governance/**` | `.claude/settings.json` (ถ้าใช้ Claude Code) |
 
 **ข้อจำกัด (ต้องรู้)**: ทั้ง 4 ชั้นกัน agent ที่ "ทำตามกฎ" และกันความผิดพลาดได้ แต่ **agent ที่ไม่ทำตามกฎและถือสิทธิ์ admin ของ repo ยังข้ามได้** (เช่น ปิด branch protection, push ด้วยสิทธิ์ admin, หรือแก้ไฟล์ผ่าน shell แทนเครื่องมือแก้ไฟล์)
 ดังนั้น **ห้ามให้ agent มีสิทธิ์ bypass** — agent ควรใช้ GitHub account/token แยกที่มีสิทธิ์แค่ write (ไม่ใช่ admin) และไม่อยู่ใน bypass list
+**control-plane** = ไฟล์ที่กำหนดว่า repo ถูกตรวจอย่างไรและ agent ทำอะไรได้: `scripts/`, `schemas/`, `tests/`, `.github/`, `.claude/settings.json`, `.claude/agents/`, `core-paths.txt`, `SPEC.md`, `PRINCIPLES.md` (รายการเดียวอยู่ที่ `CONTROL_PLANE_PATHS` ใน `scripts/validate.py` และ CODEOWNERS ต้องครอบทุกพาธ — ตรวจโดย `tests/test_control_plane.py`)
+branch `agent/` แก้ control-plane ได้ แต่ check `guards` เตือนทุกไฟล์ที่แก้เพื่อให้มนุษย์รีวิวก่อน merge — เป็นคำเตือน ไม่ใช่ error (agent ต้องปรับตัวตรวจได้ผ่าน PR) การกั้นจริงมาจาก CODEOWNERS ที่บังคับรีวิวเท่านั้น
+กฎของ `governance/` ไม่เปลี่ยน (ยัง fail และปฏิเสธไว้ก่อนเมื่อไม่มี base)
 ข้อยกเว้นเดียวของ governance-guard: ตอนสร้าง instance ครั้งแรก ถ้า branch ปลายทางยังไม่มี `governance/` เลย การสร้างโฟลเดอร์นี้ครั้งแรกผ่านได้ (bootstrap) และแสดงคำเตือน
 
 ---
@@ -283,7 +286,7 @@ CI จัดเป็น **3 required checks** (ชื่อ job ต้องต
 | Check (job) | ตรวจอะไร | ทำให้ PR ตกได้ไหม |
 |---|---|---|
 | `structure` | schema ของ frontmatter ตาม type, `id` ไม่ซ้ำ, ลิงก์ภายในไม่เสีย, การอ้าง id/พาธมีอยู่จริง, status-rules (§5.2), `skills.lock.yml` ผ่าน schema, ชุดทดสอบของ validator เอง | ได้ |
-| `guards` | governance-guard (branch `agent/*` แตะ `governance/`), classification-guard (ระดับชั้นต้องอยู่ใน `governance/profile.yml` — ใน master มีได้แค่ `public`), secrets (pattern ของ token ที่พบบ่อยและ private key) | ได้ |
+| `guards` | governance-guard (branch `agent/*` แตะ `governance/`; แตะ control-plane = เตือนอย่างเดียว §9.1), classification-guard (ระดับชั้นต้องอยู่ใน `governance/profile.yml` — ใน master มีได้แค่ `public`), secrets (pattern ของ token ที่พบบ่อยและ private key) | ได้ |
 | `freshness` | stale-report: โน้ตที่เลย `review_after` และโน้ตที่ติด `needs-reverify` | ไม่ได้ (เตือนอย่างเดียว) |
 
 ข้อกำหนดของ workflow: trigger เป็น `pull_request` และ push เข้า `main` เท่านั้น, **ห้าม** `pull_request_target`, `permissions: contents: read`, action ของบุคคลอื่นตรึงด้วย commit SHA เต็ม, validator ไม่ใช้เครือข่ายตอนรัน

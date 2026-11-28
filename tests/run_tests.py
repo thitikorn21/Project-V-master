@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Self-tests for the Brain Hub tooling. Run: python tests/run_tests.py
 
-1. tests/fixtures/valid/<case>   every run in case.yml must exit 0 (and print expect_output if given)
+1. tests/fixtures/valid/<case>   every run in case.yml must exit 0, print every expect_output and
+                                 none of expect_absent (each: one string or a list)
 2. tests/fixtures/invalid/<case> the validator must exit 1 and report expect_code
-3. tests/test_upgrade_core.py, tests/test_install_skills.py and tests/test_hermetic.py
+3. tests/test_upgrade_core.py, tests/test_install_skills.py, tests/test_hermetic.py and
+   tests/test_control_plane.py
 
 Every subprocess runs with tests/hermetic.py: CI variables (GITHUB_*, CI, ...) and GIT_* are
 removed, and a case adds variables only through an `env:` mapping in its case.yml.
@@ -48,6 +50,12 @@ def materialize(case_dir: Path, tmp: Path) -> Path:
     return dest
 
 
+def as_list(value) -> list[str]:
+    if value is None:
+        return []
+    return [value] if isinstance(value, str) else list(value)
+
+
 def run_validator(case: Path, args: list[str], env: dict | None) -> subprocess.CompletedProcess:
     args = [str(a).replace("{case}", str(case)) for a in args]
     return subprocess.run([sys.executable, str(VALIDATE), *args, "--root", str(case / "root")],
@@ -72,10 +80,14 @@ def main() -> int:
                 res = run_validator(case, r["args"], r.get("env"))
                 out = res.stdout + res.stderr
                 name = f"valid/{case_dir.name} {' '.join(map(str, r['args']))}"
+                missing = [s for s in as_list(r.get("expect_output")) if s not in out]
+                present = [s for s in as_list(r.get("expect_absent")) if s in out]
                 if res.returncode != 0:
                     failures.append(f"{name}: exit {res.returncode}\n{out}")
-                elif r.get("expect_output") and r["expect_output"] not in out:
-                    failures.append(f"{name}: ไม่พบข้อความ {r['expect_output']!r}\n{out}")
+                elif missing:
+                    failures.append(f"{name}: ไม่พบข้อความ {missing!r}\n{out}")
+                elif present:
+                    failures.append(f"{name}: พบข้อความที่ไม่ควรมี {present!r}\n{out}")
                 else:
                     print(f"PASS {name}")
         for case_dir in sorted((HERE / "fixtures" / "invalid").iterdir()):
@@ -91,7 +103,8 @@ def main() -> int:
                 failures.append(f"{name}: ไม่พบ error {spec['expect_code']!r}\n{out}")
             else:
                 print(f"PASS {name} (จับได้: {spec['expect_code']})")
-    modules = () if fixtures_only else ("test_upgrade_core.py", "test_install_skills.py", "test_hermetic.py")
+    modules = () if fixtures_only else ("test_upgrade_core.py", "test_install_skills.py", "test_hermetic.py",
+                                        "test_control_plane.py")
     for test in modules:
         count += 1
         res = subprocess.run([sys.executable, str(HERE / test)], capture_output=True, text=True, encoding="utf-8",

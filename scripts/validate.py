@@ -3,7 +3,7 @@
 
 Commands:
   structure   schema, ids, links, references, status-rules, skills.lock.yml, governance files
-  guards      governance-guard, classification-guard, secrets
+  guards      governance-guard, control-plane (warnings), classification-guard, secrets
   freshness   stale-report (warnings only, always exits 0)
   run-checks  re-run the `kind: test` evidence scripts of notes verified by `check:`
   all         structure + guards + freshness
@@ -36,6 +36,20 @@ SKIP_DIRS = {".git", "node_modules", ".obsidian", "__pycache__", ".venv"}
 TOP_LEVEL_SKIP = {"tests"}
 KNOWLEDGE_TYPES = {"system", "entity", "field", "rule", "query", "dq", "glossary"}
 PROTECTED_PREFIX = "governance/"
+# Files that decide how the repo is checked or what agents may do. A branch agent/ may change them,
+# but every changed one is reported (warning) for human review. ".github/CODEOWNERS" must list each
+# of these and PROTECTED_PREFIX (tests/test_control_plane.py). Entries ending in "/" = whole folder.
+CONTROL_PLANE_PATHS = (
+    "scripts/",
+    "schemas/",
+    "tests/",
+    ".github/",
+    ".claude/settings.json",
+    ".claude/agents/",
+    "core-paths.txt",
+    "SPEC.md",
+    "PRINCIPLES.md",
+)
 AGENT_PREFIX = "agent/"
 EXAMPLES_PREFIX = "examples/"
 TRANSITIONS = {
@@ -439,13 +453,19 @@ def head_ref_of(args) -> str | None:
     return args.head_ref or os.environ.get("GITHUB_HEAD_REF") or None
 
 
-def check_governance_guard(args, root: Path, report: Report) -> None:
-    head = head_ref_of(args)
-    if not head or not head.startswith(AGENT_PREFIX):
+def is_agent_branch(head: str | None) -> bool:
+    return bool(head and head.startswith(AGENT_PREFIX))
+
+
+def is_control_plane(path: str) -> bool:
+    return any(path.startswith(p) if p.endswith("/") else path == p for p in CONTROL_PLANE_PATHS)
+
+
+def check_governance_guard(head: str | None, base: BaseView | None, files: list[str] | None,
+                           report: Report) -> None:
+    if not is_agent_branch(head):
         report.notice(f"governance-guard: ผ่าน (head ref {head!r} ไม่ใช่ branch agent/)")
         return
-    base = make_base(args, root, report)
-    files = changed_files(args, root, base)
     if files is None:
         report.error("governance-touched", "-", "branch agent/ แต่หาไฟล์ที่เปลี่ยนไม่ได้ (ไม่มี base) — ปฏิเสธไว้ก่อน")
         return
@@ -462,6 +482,23 @@ def check_governance_guard(args, root: Path, report: Report) -> None:
         return
     for f in touched:
         report.error("governance-touched", f, f"branch {head} แตะ governance/ ไม่ได้ (SPEC §9.1)")
+
+
+def check_control_plane(head: str | None, files: list[str] | None, report: Report) -> None:
+    if not is_agent_branch(head):
+        report.notice(f"control-plane: ไม่ตรวจ (head ref {head!r} ไม่ใช่ branch agent/)")
+        return
+    if files is None:
+        report.notice("control-plane: ตรวจไม่ได้เพราะหาไฟล์ที่เปลี่ยนไม่ได้ (governance-guard ปฏิเสธไว้แล้ว)")
+        return
+    touched = [f for f in files if is_control_plane(f)]
+    if not touched:
+        report.notice(f"control-plane: ไม่แตะ ({len(files)} ไฟล์ที่เปลี่ยน)")
+        return
+    for f in touched:
+        report.warn("control-plane-touched", f,
+                    f"branch {head} แก้ไฟล์ control-plane (ตัวตรวจ/กฎ/CI ของ repo) — "
+                    "ต้องให้มนุษย์รีวิวไฟล์นี้ก่อน merge (SPEC §9.1)")
 
 
 def check_classification(root: Path, report: Report) -> None:
@@ -504,7 +541,13 @@ def check_secrets(root: Path, report: Report) -> None:
 
 
 def cmd_guards(args, root: Path, report: Report) -> None:
-    check_governance_guard(args, root, report)
+    head = head_ref_of(args)
+    base, files = None, None
+    if is_agent_branch(head):
+        base = make_base(args, root, report)
+        files = changed_files(args, root, base)
+    check_governance_guard(head, base, files, report)
+    check_control_plane(head, files, report)
     check_classification(root, report)
     check_secrets(root, report)
 
