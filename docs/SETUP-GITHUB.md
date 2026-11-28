@@ -7,7 +7,7 @@
 คำศัพท์:
 - **PR (Pull Request)** = คำขอให้รวมงานจาก branch หนึ่งเข้า `main` ให้คนตรวจก่อน
 - **check** = การตรวจอัตโนมัติที่ GitHub รันให้ทุก PR (ของ repo นี้มี `structure`, `guards`, `freshness`)
-- **Code Owner** = เจ้าของพาธที่กำหนดในไฟล์ `.github/CODEOWNERS` (ของ repo นี้คือ `@thitikorn21` สำหรับ `governance/`, `.github/` และ `.claude/settings.json`)
+- **Code Owner** = เจ้าของพาธที่กำหนดในไฟล์ `.github/CODEOWNERS` (ของ repo นี้คือ `@thitikorn21` สำหรับ `governance/`, `.github/`, `.claude/settings.json`, `.claude/agents/`, `scripts/`, `schemas/`, `tests/`, `core-paths.txt`, `SPEC.md` และ `PRINCIPLES.md`)
 
 ---
 
@@ -19,6 +19,9 @@ GitHub **ไม่ให้คนเปิด PR อนุมัติ PR ขอ
 |---|---|---|---|
 | **A (แนะนำ)** | ให้ agent ใช้บัญชี GitHub แยกอีกบัญชี เชิญเป็น collaborator ของ repo (ได้สิทธิ์ write ไม่ใช่ admin) | คุณอนุมัติ PR ของ agent ได้จริง; เปิด "ห้ามข้ามเงื่อนไข" ได้; agent ไม่มีสิทธิ์ข้ามกฎ | ต้องสร้างบัญชีเพิ่มและตั้งการล็อกอินให้ agent |
 | **B (ชั่วคราว)** | agent ใช้บัญชีของคุณ (แบบที่ใช้อยู่ตอนนี้) | ไม่ต้องตั้งอะไรเพิ่ม | ตั้ง "ต้องมีผู้อนุมัติ" ไม่ได้ (ไม่งั้นไม่มีใคร merge ได้) จึงเหลือแค่ "ต้องผ่าน check" — **agent ที่ถือบัญชีคุณ merge งานตัวเองหรือแก้การตั้งค่านี้ได้** การรีวิวของคุณจึงเป็นวินัย ไม่ใช่สิ่งที่ระบบบังคับ (SPEC §9.1) |
+
+**ภายใต้ทางเลือก B ไฟล์ CODEOWNERS ไม่ถูกบังคับ** (ไม่ได้ติ๊ก "Require review from Code Owners") — branch ของ agent แก้ตัวตรวจ (`scripts/`, `tests/`, `.github/` ฯลฯ) แล้ว check ยังเขียวได้
+check `guards` จะขึ้นคำเตือน `control-plane-touched` ทีละไฟล์ที่ถูกแก้ ให้เปิดดูไฟล์เหล่านั้นใน Files changed ก่อน merge ทุกครั้ง — แต่เป็น **คำเตือนเท่านั้น ไม่กั้นการ merge** การกั้นจริงต้องใช้ทางเลือก A
 
 ด้านล่างระบุว่าช่องไหนต่างกันระหว่าง A กับ B
 
