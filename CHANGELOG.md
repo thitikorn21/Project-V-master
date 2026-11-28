@@ -5,6 +5,8 @@
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-11-28
+
 ### เพิ่ม
 - check `guards`: branch `agent/*` ที่แก้ไฟล์ control-plane (`scripts/`, `schemas/`, `tests/`, `.github/`, `.claude/settings.json`, `.claude/agents/`, `core-paths.txt`, `SPEC.md`, `PRINCIPLES.md`) ได้คำเตือน `control-plane-touched` ทีละไฟล์ (เตือนเท่านั้น ไม่ทำให้ PR ตก) — SPEC §9.1
 - `.github/CODEOWNERS` ครอบพาธ control-plane ทั้งหมด และ `tests/test_control_plane.py` ตรวจว่ารายการใน CODEOWNERS ตรงกับ `CONTROL_PLANE_PATHS` ใน `scripts/validate.py`
