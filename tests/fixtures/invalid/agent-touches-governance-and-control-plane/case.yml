@@ -1,0 +1,3 @@
+description: branch agent/ แก้ทั้ง governance/ และ scripts/ = governance ยังเป็น error เหมือนเดิม (คำเตือน control-plane ไม่ทำให้ผ่าน)
+args: [guards, --head-ref, agent/x, --changed-files, "{case}/changed.txt", --base-dir, "{case}/base"]
+expect_code: governance-touched

@@ -1,0 +1,10 @@
+scripts/validate.py
+schemas/field.schema.json
+tests/run_tests.py
+.github/CODEOWNERS
+.claude/settings.json
+.claude/agents/reviewer.md
+core-paths.txt
+SPEC.md
+PRINCIPLES.md
+knowledge/fields/a.md
